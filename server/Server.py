@@ -43,12 +43,16 @@ class Server:
 
         if user.logged:
             self.utenti.append([address[0], address[1], user])
-            contatto_host = self.ricevi(user)
-            contatto_port = int(self.ricevi(user))
-            print(contatto_host, contatto_port)
-            user.connesso = True
-            self.chat(contatto_host, contatto_port, user)
-            #print(f"Connessione terminata da {address}")
+            try:
+                contatto_host = self.ricevi(user)
+                contatto_port = int(self.ricevi(user))
+            except:
+                print(f"Connessione terminata da {address}")
+            else:
+                print(contatto_host, contatto_port)
+                user.connesso = True
+                self.chat(contatto_host, contatto_port, user)
+                print(f"Connessione terminata da {address}")
 
     def chat(self, host, port, user):
         destinatario = None
@@ -70,11 +74,20 @@ class Server:
                 thread2.start()
                 print("avviato thread 2")
                 break
+        while user.logged and destinatario.logged:
+            pass
 
     def inoltra_msg(self, mittente, destinatario):
         while True:
-            msg = self.ricevi(mittente)
-            self.invia(destinatario, msg)
+            msg = ""
+            try:
+                msg = self.ricevi(mittente)
+            except ConnectionResetError:
+                mittente.logged = False
+            try:
+                self.invia(destinatario, msg)
+            except ConnectionResetError:
+                destinatario.logged = False
 
     def invia(self, user, msg):
         msg = self.criptatore.encrypt_info(msg)
@@ -82,5 +95,6 @@ class Server:
 
     def ricevi(self, user):
         msg = user.clientsocket.recv(1024)
+        print(f"messaggio : {msg}")
         msg = self.criptatore.decrypt_info(msg)
         return msg
